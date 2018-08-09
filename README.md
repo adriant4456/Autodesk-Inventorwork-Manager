@@ -1,2 +1,3 @@
 # Autodesk-Inventorwork-Manager
-App used to manage Inventorwork projects for ease of use with SAP
+
+This is an app used to manage and organise Autodesk Inventor InventorWork projects for ease of use with SAP. The app uses a Tkinter GUI to allow users to restart Inventor and create and change InventorWork folders.
