@@ -1,5 +1,3 @@
-##Test Script
-
 import subprocess       #To open/close external programs
 import time             #To use sleep function, program waits
 import shutil           #To rename files/folders
@@ -166,7 +164,7 @@ class igui:
     def __init__(self, master):
         self.master = master            #master = root = tk()
         self.master.title("InventorWork Manager")   #master.title = root.title = tk().title
-
+        
         #initializing tkk frame to hold widgets, sets size to expand and padding
         self.mainframe = ttk.Frame(master, padding = '3 3 12 12')
         self.mainframe.grid(column = 0, row = 0, sticky = (N,S,E,W))
@@ -192,9 +190,15 @@ class igui:
         self.iscroll = ttk.Combobox(self.mainframe, textvariable = self.folder_var,
                                     width = 40)
 
-        self.update_list()
+        
         self.iscroll.bind('<<ComboboxSelected>>', self.comboselect)
         self.iscroll.grid(column = 1, row = 5)
+        self.current_folder_name = StringVar()
+        
+        self.current_folder_label = ttk.Label(self.mainframe, textvariable = self.current_folder_name,
+                                     justify = 'left')
+        self.current_folder_label.grid(column = 1, row = 6, sticky = W)
+        self.update_list()
         for child in self.mainframe.winfo_children():
             child.grid_configure(padx=5, pady=5)
 
@@ -269,8 +273,6 @@ class igui:
         if os.path.isfile('C:\\InventorWork\\folder_name.txt'):
             self.mwindow = Toplevel(self.master)
             results = window_make_txt_exists(self.mwindow)
-            #self.mwindow.grab_set()
-            #self.master.wait_window(self.mwindow)
             print('updating list')
             self.update_list()
         else:
@@ -284,11 +286,22 @@ class igui:
 
 
     def update_list(self):
+        print('list update')
         self.folder_list =[]
         for i in os.listdir('C:\\'):
             if 'InventorWork' in i:
                 self.folder_list.append(i)
         self.iscroll['values'] = self.folder_list
+        txtpath = 'C:\\InventorWork\\folder_name.txt'
+        current_folder_name = ''
+        with open(txtpath) as file:
+            current_folder = file.read().split('_')
+            for i in range(1, len(current_folder)):
+                current_folder_name += (current_folder[i] + ' ')
+        print(current_folder_name)
+        self.current_folder_name.set('Current InventorWork: ' + current_folder_name)
+    
+        
 
 class window_make_txt_exists:
     def __init__(self, master):
@@ -315,8 +328,8 @@ class window_make_txt_exists:
 
 
     def newclick(self):
-        #if not (self.project.get() and self.machine.get()):
-            #return False
+        if not (self.project.get() and self.machine.get()):
+            return False
         if not (check_valid_folder_name(self.project.get()) and check_valid_folder_name(self.machine.get())):
                 messagebox.showinfo(message = "Names can only contain alphanumeric characters.")
         else:
