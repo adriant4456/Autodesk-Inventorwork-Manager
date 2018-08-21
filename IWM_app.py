@@ -115,6 +115,7 @@ def rename():
             print('Renamed InventorWork to ' + source_name)
             result = True
         except PermissionError:
+            time.sleep(0.5)
             continue
     return True
 
@@ -157,6 +158,19 @@ def check_valid_folder_name(name):
             return False
     return True
 
+def rename_folder(project: str, machine:str, folder:str) -> None:
+    with open(f"C:\\{folder}\\folder_name.txt", 'w') as txtfile:
+        txtfile.write(f"InventorWork_{project}_{machine}")
+    if folder != 'InventorWork':
+        os.rename(f"C:\\{folder}", f"InventorWork_{project}_{machine}")
+    else:
+        pass
+
+
+        
+        
+        
+    
 ### GUI ################
 
 class igui:
@@ -182,6 +196,8 @@ class igui:
         self.NewButton.grid(column = 1, row = 2, sticky = W)
         self.ChangeButton = ttk.Button(self.mainframe, text = 'Change InventorWork', command = self.yousure)
         self.ChangeButton.grid(column = 2, row = 5, sticky = (E,W))
+        self.RenameButton = ttk.Button(self.mainframe, text = 'Rename InventorWork', command = self.callrename)
+        self.RenameButton.grid(column = 2, row = 6, sticky = (E,W))
         self.HelpButton = ttk.Button(self.mainframe, text='?', command = self.help)
         self.HelpButton.grid(column = 3, row = 1, sticky = (W))
         #scrollbar for folder selection and seperator
@@ -260,7 +276,7 @@ class igui:
 
 
     def help(self):
-        self.helpmessage = messagebox.showinfo(message = "This app manages InventorWork folders. InventorWork names are kept"
+        self.helpmessage = messagebox.showinfo(message = "Version 2.0 \n\nThis app manages InventorWork folders. InventorWork names are kept"
                                                            " track of by generating a folder_name.txt file in the InventorWork"
                                                            " folder. The user is prompted if a folder_name.txt file"
                                                             " doesn't exist. Inventor is restarted when changing folders if Inventor is open.\n\n Written by Adrian Tai")
@@ -294,12 +310,27 @@ class igui:
         self.iscroll['values'] = self.folder_list
         txtpath = 'C:\\InventorWork\\folder_name.txt'
         current_folder_name = ''
-        with open(txtpath) as file:
-            current_folder = file.read().split('_')
-            for i in range(1, len(current_folder)):
-                current_folder_name += (current_folder[i] + ' ')
+        try:
+            with open(txtpath) as file:
+                current_folder = file.read().split('_')
+                for i in range(1, len(current_folder)):
+                    current_folder_name += (current_folder[i] + ' ')
+        except FileNotFoundError:
+            pass
         print(current_folder_name)
         self.current_folder_name.set('Current InventorWork: ' + current_folder_name)
+
+    def callrename(self):
+        try:
+            print(self.change_selection)
+            self.rwindow = Toplevel(self.master)
+            self.app = rename_window(self.rwindow, self.change_selection)
+            #self.rwindow.grab_set()
+            self.master.wait_window(self.rwindow)
+            self.update_list()
+        except AttributeError:
+            pass
+
     
         
 
@@ -448,8 +479,43 @@ class loadwindow:
         self.master.attributes("-topmost", True)
         self.mainlabel = ttk.Label(self.master, text = 'Folder may be in use, trying to rename folder...', justify = 'center')
         self.mainlabel.grid_configure(padx = 40, pady = 40)
-
+#rename window -- new
+class rename_window:
+    def __init__(self, master, folder):
+        self.master = master     #sets self.master= master = initializing variable input
+                                # intializing varialbe = self.mwindow =
+                                #Toplevel(self.mainframe) = new window with mainframe
+                                #as parent
         
+        self.project = StringVar()
+        self.machine = StringVar()
+        self.master.rowconfigure(1, pad = 20, weight = 1)
+        self.master.rowconfigure(4, pad = 20, weight = 1)
+        self.main_label = ttk.Label(self.master, text = 'Rename InventorWork')
+        self.main_label.grid(column = 1, row =1, columnspan = 2)
+        self.project_label = ttk.Label(self.master, text = 'Project', justify = 'center').grid(column = 1, row = 2, sticky = 'e')
+        self.machine_label = ttk.Label(self.master, text = 'Machine', justify = 'center').grid(column = 1, row = 3)
+        self.project_entry = ttk.Entry(self.master, textvariable = self.project).grid(column = 2, row = 2)
+        self.machine_entry = ttk.Entry(self.master, textvariable = self.machine).grid(column = 2, row =3)
+        self.makebutton = ttk.Button(self.master, text = 'Rename', command = self.renameclick).grid(row = 4, column=2, columnspan = 2)
+        for child in self.master.winfo_children():
+            child.grid_configure(padx = 10, pady = 5)
+        master.grab_set()
+        master.wait_window()
+
+
+    def renameclick(self):
+        if not (self.project.get() and self.machine.get()):
+            return False
+        if not (check_valid_folder_name(self.project.get()) and check_valid_folder_name(self.machine.get())):
+                messagebox.showinfo(message = "Names can only contain alphanumeric characters.")
+        else:
+            self.yesno = messagebox.askyesno('Rename', "Are you sure you want to rename InventorWork?", parent = self.master)
+            if self.yesno:
+                rename_folder(self.project.get(),self.machine.get(),folder)
+                self.master.destroy()
+                
+     
 
 
         
