@@ -10,6 +10,7 @@ from tkinter import ttk
 from tkinter import messagebox
 
 
+
 ##GUI
 
 
@@ -197,12 +198,12 @@ class igui:
         self.ChangeButton = ttk.Button(self.mainframe, text = 'Change InventorWork', command = self.yousure)
         self.ChangeButton.grid(column = 2, row = 5, sticky = (E,W))
         self.RenameButton = ttk.Button(self.mainframe, text = 'Rename InventorWork', command = self.callrename)
-        self.RenameButton.grid(column = 2, row = 6, sticky = (E,W))
+        self.RenameButton.grid(column = 3, row = 5, sticky = (E,W))
         self.HelpButton = ttk.Button(self.mainframe, text='?', command = self.help)
         self.HelpButton.grid(column = 3, row = 1, sticky = (W))
         #scrollbar for folder selection and seperator
         self.folder_var = StringVar()
-        self.separator = ttk.Separator(self.mainframe, orient = HORIZONTAL).grid(row = 3, columnspan = 3, sticky = (E, W))
+        self.separator = ttk.Separator(self.mainframe, orient = HORIZONTAL).grid(row = 3, columnspan = 4, sticky = (E, W))
         self.iscroll = ttk.Combobox(self.mainframe, textvariable = self.folder_var,
                                     width = 40)
 
@@ -262,16 +263,22 @@ class igui:
         
 
     def yousure(self):
-        self.yousure = messagebox.askyesno('Restart', 'Are you sure you want to restart Inventor and change InventorWork folder?', parent = self.master)
-        if self.yousure:
-            self.rename_load = Toplevel(self.master)
-            self.rename_load.transient()
-            self.app = loadwindow(self.rename_load)
-            self.rename_load.update()
-            print ('supposed to have ran loading window')
-            self.changeclick()
-            self.rename_load.destroy()
-        else:
+        #check there is a folder selected
+        try:
+            print(self.change_selection)
+            self.yousure = messagebox.askyesno('Restart', 'Are you sure you want to restart Inventor and change InventorWork folder?', parent = self.master)
+            if self.yousure:
+                self.rename_load = Toplevel(self.master)
+                self.rename_load.transient()
+                self.app = loadwindow(self.rename_load)
+                self.rename_load.update()
+                print ('supposed to have ran loading window')
+                self.changeclick()
+                self.rename_load.destroy()
+            else:
+                pass
+        except AttributeError as e:
+            print(f"No folder selected, {e}")
             pass
 
 
@@ -317,8 +324,9 @@ class igui:
                     current_folder_name += (current_folder[i] + ' ')
         except FileNotFoundError:
             pass
-        print(current_folder_name)
+        print(f"current folder name: {current_folder_name}")
         self.current_folder_name.set('Current InventorWork: ' + current_folder_name)
+
 
     def callrename(self):
         try:
@@ -489,6 +497,7 @@ class rename_window:
         
         self.project = StringVar()
         self.machine = StringVar()
+        self.folder = folder #folder variable for rename function
         self.master.rowconfigure(1, pad = 20, weight = 1)
         self.master.rowconfigure(4, pad = 20, weight = 1)
         self.main_label = ttk.Label(self.master, text = 'Rename InventorWork')
@@ -501,7 +510,7 @@ class rename_window:
         for child in self.master.winfo_children():
             child.grid_configure(padx = 10, pady = 5)
         master.grab_set()
-        master.wait_window()
+        #master.wait_window()
 
 
     def renameclick(self):
@@ -512,7 +521,7 @@ class rename_window:
         else:
             self.yesno = messagebox.askyesno('Rename', "Are you sure you want to rename InventorWork?", parent = self.master)
             if self.yesno:
-                rename_folder(self.project.get(),self.machine.get(),folder)
+                rename_folder(self.project.get(),self.machine.get(),self.folder)
                 self.master.destroy()
                 
      
