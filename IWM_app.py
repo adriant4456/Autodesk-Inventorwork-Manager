@@ -12,6 +12,7 @@ from tkinter import messagebox
 
 
 ##GUI
+##TODO: Catch error if folder is in use ie. because excel file open
 
 
 def change(folder):
@@ -32,12 +33,23 @@ def change(folder):
     if os.path.exists(iw_change):
         if kill():
             print('closed Inventor')
-            rename()
+            try:
+                rename()
+            except RuntimeError as e:
+                raise
             print('ran rename()')
             time.sleep(1)
             print(iw_change)
             time.sleep(1)
-            os.rename(iw_change, 'C:\\InventorWork')
+            for i in range(10):
+                try:
+                    os.rename(iw_change, 'C:\\InventorWork')
+                    rename_success = True
+                except PermissionError:
+                    sleep(1)
+                    continue
+            if not rename_success:
+                raise RuntimeError
             print('renamed from' + iw_change)
             open_inv()
             print('opened inventor')
@@ -109,16 +121,18 @@ def rename():
     folder_txt.close()
     time.sleep(1)
     result = False
-    #loading window for rename, if folder is locked
-    while not result:
+    current_time = time.time()
+    while (time.time() - current_time) < 40:
         try:
             os.rename('C:\\InventorWork', 'C:\\' + source_name)
             print('Renamed InventorWork to ' + source_name)
-            result = True
+            break
         except PermissionError:
             time.sleep(0.5)
+            print(time.time() - current_time)
             continue
-    return True
+        return True
+    raise RuntimeError
 
 
 def newIW(project, machine):
@@ -160,10 +174,10 @@ def check_valid_folder_name(name):
     return True
 
 def rename_folder(project: str, machine:str, folder:str) -> None:
-    with open(f"C:\\{folder}\\folder_name.txt", 'w') as txtfile:
+    with open(f"C:\\{folder}\\folder_name.txt", 'w+') as txtfile:
         txtfile.write(f"InventorWork_{project}_{machine}")
     if folder != 'InventorWork':
-        os.rename(f"C:\\{folder}", f"InventorWork_{project}_{machine}")
+        os.rename(f"C:\\{folder}", f"C:\\InventorWork_{project}_{machine}")
     else:
         pass
 
@@ -256,6 +270,12 @@ class igui:
             self.update_list()
         except OSError as e:
             print(repr(e))
+            self.update_list()
+        except RuntimeError as e:
+            print(repr(e))
+            self.rename_load.destroy()
+            self.rename_load.update()
+            messagebox.showinfo(message = "Renaming folder timed out. Please ensure no programs are using the InventorWork folder.")
             self.update_list()
 
 
