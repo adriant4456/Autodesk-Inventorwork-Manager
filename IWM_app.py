@@ -12,7 +12,7 @@ from tkinter import messagebox
 
 
 ##GUI
-##TODO: Catch error if folder is in use ie. because excel file open
+##TODO: refactor rename folder to one function
 
 
 def change(folder):
@@ -20,7 +20,8 @@ def change(folder):
     source_path = 'C:\\InventorWork'
     destination_path = 'C:\\' + folder
     if os.path.isfile(source_path + '\\' + 'folder_name.txt'):
-         pass
+        with open(f"{source_path}\\folder_name.txt", 'r') as txtfile:
+            source_name = txtfile.read()
     else:
         print('no txt file')
         raise LookupError('Cannot find folder_name.txt')
@@ -41,15 +42,24 @@ def change(folder):
             time.sleep(1)
             print(iw_change)
             time.sleep(1)
+            rename_success = False
             for i in range(10):
                 try:
                     os.rename(iw_change, 'C:\\InventorWork')
                     rename_success = True
+                    break
                 except PermissionError:
-                    sleep(1)
+                    time.sleep(1)
                     continue
             if not rename_success:
-                raise RuntimeError
+                #rename folder back to previous inventorwork
+                try:
+                    print(f'source name C:\\{source_name}')
+                    os.rename(f'C:\\{source_name}', 'C:\\InventorWork')
+                    raise RuntimeError
+                except PermissionError:
+                    print
+                    raise RuntimeError
             print('renamed from' + iw_change)
             open_inv()
             print('opened inventor')
@@ -61,13 +71,14 @@ def change(folder):
 
 def make(project,machine):
     if kill():
-        if rename():
+        try:
+            rename()
             newIW(project, machine)
-            return True
-        else:
-            return False
+        except RuntimeError as e:
+            raise
     else:
-        return False
+        print('inventor not closed')
+        raise OSError('Inventor not closed')
     
 
 ##Close current inventor session
@@ -122,16 +133,15 @@ def rename():
     time.sleep(1)
     result = False
     current_time = time.time()
-    while (time.time() - current_time) < 40:
+    while (time.time() - current_time) < 30:
         try:
             os.rename('C:\\InventorWork', 'C:\\' + source_name)
             print('Renamed InventorWork to ' + source_name)
-            break
+            return True
         except PermissionError:
             time.sleep(0.5)
             print(time.time() - current_time)
             continue
-        return True
     raise RuntimeError
 
 
@@ -172,16 +182,19 @@ def check_valid_folder_name(name):
         else:
             return False
     return True
-
+'''
 def rename_folder(project: str, machine:str, folder:str) -> None:
     with open(f"C:\\{folder}\\folder_name.txt", 'w+') as txtfile:
+        if project and machine is None:
+            
         txtfile.write(f"InventorWork_{project}_{machine}")
     if folder != 'InventorWork':
-        os.rename(f"C:\\{folder}", f"C:\\InventorWork_{project}_{machine}")
+        try:
+            os.rename(f"C:\\{folder}", f"C:\\InventorWork_{project}_{machine}")
     else:
         pass
 
-
+'''
         
         
         
@@ -400,7 +413,17 @@ class window_make_txt_exists:
                 self.rename_load.update()
                 print ('supposed to have ran loading window')
                 print('destroyed toplevel')
-                check = make(self.project.get(), self.machine.get())
+                try:
+                    check = make(self.project.get(), self.machine.get())
+                except OSError as e:
+                    print(repr(e))
+                    self.update_list()
+                except RuntimeError as e:
+                    print(repr(e))
+                    self.rename_load.destroy()
+                    self.rename_load.update()
+                    messagebox.showinfo(message = "Renaming folder timed out. Please ensure no programs are using the InventorWork folder.")
+                    self.update_list()
                 self.master.destroy()
                 if check:
                     return True
@@ -496,10 +519,6 @@ class window_make_notxt:
                 no_proj(self.project_old.get(), self.machine_old.get(), None)
                 check = make(self.project_new.get(), self.machine_new.get())
                 self.master.destroy()
-                if check:
-                    return True
-                else:
-                    return False
 
 class loadwindow:
     def __init__(self, master):
