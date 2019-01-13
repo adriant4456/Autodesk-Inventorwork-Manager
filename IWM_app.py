@@ -8,7 +8,8 @@ import win32con
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
-
+import datetime
+import openpyxl as pyxl
 
 
 ##GUI
@@ -195,9 +196,102 @@ def rename_folder(project: str, machine:str, folder:str) -> None:
         pass
 
 '''
-        
-        
-        
+
+### Time sheet functions ########
+
+
+class Timesheet_Entry:
+
+    def __init__(self, date, start_time, wbs):
+        self.date = date
+        self.start_time = start_time
+        self.wbs = wbs
+
+    def get_date(self):
+        return self.date
+
+    def get_time(self):
+        return (time.time() - self.start_time)/3600
+
+    def get_wbs(self):
+        return self.wbs
+
+
+def log_timesheet_entry(entry :Timesheet_Entry):
+    #takes valid timesheet entry object and logs into current active
+    #timesheet
+    try:
+        wb = pyxl.load_workbook('C:\\Users\\active_timesheet.xlsx')
+        sheet= wb.active
+    except NameError:
+        raise
+    #set default timesheet entry row number as max+1
+    entry_row = sheet.max_row + 1
+    #check current wbs entries, overwrite row entry if existing in sheet
+    for row in sheet.iter_rows(min_row=1, max_col=1,max_row=sheet.max_row):
+        for cell in row:
+            try:
+                if entry.get_wbs() in cell.value:
+                    entry_row = cell.row
+                    break
+                else:
+                    continue
+                break
+            except TypeError:
+                continue
+    # if wbs entry doesn't exist create
+    if entry_row == (sheet.max_row + 1):
+        sheet.cell(row = entry_row, column = 1).value = entry.get_wbs()
+    #check date entries, max column entry should be latest
+    latest_date_entry = sheet.cell(row=1, column=sheet.max_column).value
+    if type(latest_date_entry) == datetime.datetime:
+        if entry.get_date() == latest_date_entry.date():
+            entry_column = sheet.max_column
+        else:
+            entry_column = sheet.max_column + 1
+            sheet.cell(row=1, column = entry_column).value = entry.get_date()
+    elif latest_date_entry is None:
+        entry_column = sheet.max_column + 1
+        sheet.cell(row=1, column = entry_column).value = entry.get_date()
+    else:
+        raise TypeError
+    #check for existing time entry
+    entry_cell = sheet.cell(row = entry_row, column = entry_column)
+    #add time entry to existing entry if it exists
+    if entry_cell.value is not None:
+        entry_cell.value += entry.get_time()
+    else:
+        entry_cell.value = entry.get_time()
+    wb.save('C:\\Users\\active_timesheet.xlsx')
+
+def ask_log_time_entry():
+    wbs = active_timesheet_entry.get_wbs()
+    time = active_timesheet_entry.get_time()
+    if messagebox.askyesno('Log Timesheet Entry', f'Are you sure you want to log {time} hours to {wbs} in your timesheet?'):
+        log_timesheet_entry(active_timesheet_entry)
+        root.destroy()
+    else:
+        root.destroy()
+
+def save_wbs_data(wbs):
+    with open('C:\\InventorWork\\wbs.txt', 'w+') as txtfile:
+        txtfile.write(wbs)
+    return
+
+def instantiate_timesheet_entry(wbs=None) -> Timesheet_Entry:
+    if wbs is None:
+        with open('C:\\InventorWork\\wbs.txt', 'r') as file:
+            wbs = file.read()
+    date = datetime.datetime.now().date()
+    start_time = time.time()
+    return Timesheet_Entry(date, start_time, wbs)
+    
+def check_for_wbs_data():
+    if os.path.isfile('C:\\InventorWork\\wbs.txt'):
+        return True
+    else:
+        return False
+    
     
 ### GUI ################
 
@@ -246,6 +340,10 @@ class igui:
         for child in self.mainframe.winfo_children():
             child.grid_configure(padx=5, pady=5)
 
+        self.start_timesheet_entry()
+
+
+
     #function called everyime scroll window selection changed, sets variable
             #equal to selection
     def comboselect(self,eventObject):
@@ -259,7 +357,8 @@ class igui:
         try:
             change(self.change_selection)
             self.update_list()
-            print('hwat')
+            print('folder changed successfully')
+            self.start_time_sheet_entry()
         except LookupError as e:
             print(repr(e))
             self.rename_load.destroy()
@@ -281,6 +380,7 @@ class igui:
             self.rename_load.destroy()
             self.rename_load.update()
             self.update_list()
+            self.start_timesheet_entry()
         except OSError as e:
             print(repr(e))
             self.update_list()
@@ -372,7 +472,18 @@ class igui:
         except AttributeError:
             pass
 
-    
+
+    def start_timesheet_entry(self):
+        #check for wbs data ask if unavailable
+        if  not check_for_wbs_data:
+            messagebox.showinfo(message = "Please enter network and activity for the current machine")
+            self.mwindow = Toplevel(self.master)
+            wbs_window = Wbs_Entry_Window(self.mwindow)
+            print('updating list')
+            self.update_list()
+        else:
+            global active_timesheet_entry
+            active_timesheet_entry = instantiate_timesheet_entry()
         
 
 class window_make_txt_exists:
@@ -415,6 +526,7 @@ class window_make_txt_exists:
                 print('destroyed toplevel')
                 try:
                     check = make(self.project.get(), self.machine.get())
+                    self.start_timesheet_entry()
                 except OSError as e:
                     print(repr(e))
                     self.update_list()
@@ -563,13 +675,58 @@ class rename_window:
                 rename_folder(self.project.get(),self.machine.get(),self.folder)
                 self.master.destroy()
                 
-     
+class Wbs_Entry_Window:
+    
+    def __init__(self, master):
+        self.master = master     #sets self.master= master = initializing variable input
+                                # intializing varialbe = self.mwindow =
+                                #Toplevel(self.mainframe) = new window with mainframe
+                                #as parent
+        
+        self.network = StringVar()
+        self.activity = StringVar()
+        self.master.rowconfigure(1, pad = 20, weight = 1)
+        self.master.rowconfigure(4, pad = 20, weight = 1)
+        self.main_label = ttk.Label(self.master, text = 'WBS Entry')
+        self.main_label.grid(column = 1, row =1, columnspan = 2)
+        self.network_label = ttk.Label(self.master, text = 'Network', justify = 'center').grid(column = 1, row = 2, sticky = 'e')
+        self.activity_label = ttk.Label(self.master, text = 'Activity', justify = 'center').grid(column = 1, row = 3)
+        self.network_entry = ttk.Entry(self.master, textvariable = self.network).grid(column = 2, row = 2)
+        self.activity_entry = ttk.Entry(self.master, textvariable = self.activity).grid(column = 2, row =3)
+        self.makebutton = ttk.Button(self.master, text = 'OK', command = self.set_wbs).grid(row = 4, column=2, columnspan = 2)
+        for child in self.master.winfo_children():
+            child.grid_configure(padx = 10, pady = 5)
+        master.grab_set()
+        master.wait_window()
+
+    def set_wbs(self):
+        if not (self.network.get() and self.activity.get()):
+            return False
+        else:
+            network = self.network.get()
+            activity = self.activity.get()
+            wbs = f"{network}/{activity}"
+            global active_timesheet_entry
+            active_timesheet_entry = instantiate_timesheet_entry(wbs)
+            save_wbs_data(wbs)
+            self.master.destroy()
+        
+
+
+
+    
+    
 
 
         
-
-            
+#create timesheet if non-existant
+if not os.path.isfile('C:\\Users\\active_timesheet.xlsx'):
+    wb=pyxl.Workbook()
+    wb.save('C:\\Users\\active_timesheet.xlsx')
+#timesheet entry global var
+active_timesheet_entry = None
 root = Tk()
 app = igui(root)
+root.protocol("WM_DELETE_WINDOW", ask_log_time_entry)
 root.mainloop()
   
