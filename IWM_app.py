@@ -117,7 +117,8 @@ def WindowEnumerate():
     
 
 def open_inv():
-    p = subprocess.Popen('C:\\Program Files\\Autodesk\\Inventor 2016\\Bin\\Inventor.exe');
+    #p = subprocess.Popen('C:\\Program Files\\Autodesk\\Inventor 2016\\Bin\\Inventor.exe');
+    p = subprocess.Popen('D:\\Inventor Professional\\Inventor 2018\\Bin\\Inventor.exe');
     print('opened inventor')
     print(p.poll() == None);
     time.sleep(5);
@@ -269,9 +270,7 @@ def ask_log_time_entry():
     time = active_timesheet_entry.get_time()
     if messagebox.askyesno('Log Timesheet Entry', f'Are you sure you want to log {time} hours to {wbs} in your timesheet?'):
         log_timesheet_entry(active_timesheet_entry)
-        root.destroy()
-    else:
-        root.destroy()
+    return
 
 def save_wbs_data(wbs):
     with open('C:\\InventorWork\\wbs.txt', 'w+') as txtfile:
@@ -291,7 +290,10 @@ def check_for_wbs_data():
         return True
     else:
         return False
-    
+
+def program_shutdown():
+    ask_log_time_entry()
+    root.destroy()
     
 ### GUI ################
 
@@ -327,8 +329,6 @@ class igui:
         self.separator = ttk.Separator(self.mainframe, orient = HORIZONTAL).grid(row = 3, columnspan = 4, sticky = (E, W))
         self.iscroll = ttk.Combobox(self.mainframe, textvariable = self.folder_var,
                                     width = 40)
-
-        
         self.iscroll.bind('<<ComboboxSelected>>', self.comboselect)
         self.iscroll.grid(column = 1, row = 5)
         self.current_folder_name = StringVar()
@@ -336,6 +336,12 @@ class igui:
         self.current_folder_label = ttk.Label(self.mainframe, textvariable = self.current_folder_name,
                                      justify = 'left')
         self.current_folder_label.grid(column = 1, row = 6, sticky = W)
+        #Current WBS label
+        self.current_wbs = StringVar()
+        
+        self.current_wbs_label = ttk.Label(self.mainframe, textvariable = self.current_wbs,
+                                     justify = 'left')
+        self.current_wbs_label.grid(column = 1, row = 7, sticky = W)
         self.update_list()
         for child in self.mainframe.winfo_children():
             child.grid_configure(padx=5, pady=5)
@@ -358,7 +364,8 @@ class igui:
             change(self.change_selection)
             self.update_list()
             print('folder changed successfully')
-            self.start_time_sheet_entry()
+            ask_log_time_entry()
+            self.start_timesheet_entry()
         except LookupError as e:
             print(repr(e))
             self.rename_load.destroy()
@@ -380,6 +387,7 @@ class igui:
             self.rename_load.destroy()
             self.rename_load.update()
             self.update_list()
+            ask_log_time_entry()
             self.start_timesheet_entry()
         except OSError as e:
             print(repr(e))
@@ -459,7 +467,14 @@ class igui:
             pass
         print(f"current folder name: {current_folder_name}")
         self.current_folder_name.set('Current InventorWork: ' + current_folder_name)
-
+        #set default current wbs text as blank
+        current_wbs = ''
+        try:
+            with open('C:\\InventorWork\\wbs.txt') as file:
+                current_wbs = file.read()
+        except FileNotFoundError:
+            pass
+        self.current_wbs.set(f"Current WBS: {current_wbs}")
 
     def callrename(self):
         try:
@@ -475,7 +490,7 @@ class igui:
 
     def start_timesheet_entry(self):
         #check for wbs data ask if unavailable
-        if  not check_for_wbs_data:
+        if not check_for_wbs_data():
             messagebox.showinfo(message = "Please enter network and activity for the current machine")
             self.mwindow = Toplevel(self.master)
             wbs_window = Wbs_Entry_Window(self.mwindow)
@@ -727,6 +742,6 @@ if not os.path.isfile('C:\\Users\\active_timesheet.xlsx'):
 active_timesheet_entry = None
 root = Tk()
 app = igui(root)
-root.protocol("WM_DELETE_WINDOW", ask_log_time_entry)
+root.protocol("WM_DELETE_WINDOW", program_shutdown)
 root.mainloop()
   
