@@ -22,6 +22,7 @@ class Window_Generator:
     def __init__(self, master, title, entry1, entry2, button, button_fun):
         self.button_fun = button_fun
         self.master = master
+        self.master.attributes("-topmost", True)
         self.entry1_var = StringVar()
         self.entry2_var = StringVar()
         self.master.rowconfigure(1, pad = 20, weight = 1)
@@ -41,7 +42,7 @@ class Window_Generator:
             child.grid_configure(padx = 10, pady = 5)
         master.grab_set()
         master.wait_window()
-        self.master.protocol("WM_DELETE_WINDOW", self.on_close)
+
     def button_press(self):
         if not (self.entry1_var.get() and self.entry2_var.get()):
             return
@@ -52,6 +53,5 @@ class Window_Generator:
             self.button_fun(self.entry1_var.get(), self.entry2_var.get())
             self.master.destroy()
             return
-    def on_close(self):
-        print('we closed')
+
 

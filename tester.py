@@ -14,7 +14,7 @@ import generator
 
 ##GUI
 ##TODO: refactor rename folder to one function
-
+#change 
 
 def change(folder):
     #check for folder_name.txt in source folder
@@ -266,7 +266,7 @@ def save_wbs_data(wbs):
     return
 
 def instantiate_timesheet_entry(network = None, activity = None) -> Timesheet_Entry:
-    if network and activity is None:
+    if network is None and activity is None:
         with open('C:\\InventorWork\\wbs.txt', 'r') as file:
             wbs = file.read()
     else:
@@ -274,7 +274,9 @@ def instantiate_timesheet_entry(network = None, activity = None) -> Timesheet_En
         save_wbs_data(wbs)
     date = datetime.datetime.now().date()
     start_time = time.time()
-    return Timesheet_Entry(date, start_time, wbs)
+    global active_timesheet_entry
+    active_timesheet_entry = Timesheet_Entry(date, start_time, wbs)
+    return 
     
 def check_for_wbs_data():
     if os.path.isfile('C:\\InventorWork\\wbs.txt'):
@@ -357,29 +359,10 @@ class igui:
             self.update_list()
             print('folder changed successfully')
             ask_log_time_entry()
-            self.start_timesheet_entry()
-        except LookupError as e:
-            print(repr(e))
-            self.rename_load.destroy()
-            self.rename_load.update()
-            messagebox.showinfo(message = "No folder_name.txt file in InventorWork folder. Please name the"
-                                                             " current InventorWork folder.")
-            self.cwindow = Toplevel(self.master)
-            generator.Window_Generator(self.cwindow, 'Current InventorWork', 'Project', 'Machine', 'OK', no_proj)
-            self.cwindow.grab_set()
-            self.master.wait_window(self.cwindow)
-            self.rename_load = Toplevel(self.master)
-            self.rename_load.transient()
-            self.app2 = loadwindow(self.rename_load)
-            self.rename_load.update()
-            if self.app.changepressed:
-                change(self.change_selection)
-            print('from changeclick func')
-            self.rename_load.destroy()
-            self.rename_load.update()
+            start_timesheet_entry()
             self.update_list()
-            ask_log_time_entry()
-            self.start_timesheet_entry()
+        except LookupError as e:
+            return
         except OSError as e:
             print(repr(e))
             self.update_list()
@@ -391,8 +374,6 @@ class igui:
             self.update_list()
 
 
-
-        
 
     def yousure(self):
         #check there is a folder selected
@@ -409,7 +390,7 @@ class igui:
                 self.rename_load.destroy()
             else:
                 pass
-        except AttributeError as e:
+        except RuntimeError as e:
             print(f"No folder selected, {e}")
             pass
 
@@ -449,7 +430,12 @@ class igui:
                 self.folder_list.append(i)
         self.iscroll['values'] = self.folder_list
         txtpath = 'C:\\InventorWork\\folder_name.txt'
-        current_folder_name = ''
+        #check for folder_name.txt
+        current_folder_name=''
+        if not os.path.isfile('C:\\InventorWork\\folder_name.txt'):
+            messagebox.showinfo(message = "No folder_name.txt file in InventorWork folder. Please name the"
+                                                             " current InventorWork folder.")
+            self.call_name_current_iw()
         try:
             with open(txtpath) as file:
                 current_folder = file.read().split('_')
@@ -478,6 +464,12 @@ class igui:
             self.update_list()
         except AttributeError:
             pass
+
+    def call_name_current_iw(self):
+        self.mwindow = Toplevel(self.master)
+        results = generator.Window_Generator\
+                  (self.mwindow, 'Name Current InventorWork', 'Project', 'Machine', 'OK', no_proj)
+
 
 
 
@@ -642,11 +634,10 @@ def start_timesheet_entry():
     if not check_for_wbs_data():
         messagebox.showinfo(message = "Please enter network and activity for the current machine")
         mwindow = Toplevel(root)
-        mwindow.protocol(
-        wbs_window = generator.Window_Generator(mwindow, 'WBS Entry', 'Network', 'Activity', 'OK', instantiate_timesheet_entry)
+        wbs_window = generator.Window_Generator(mwindow, 'WBS Entry', 'Network', 'Activity', 'OK'\
+                                                , instantiate_timesheet_entry)
     else:
-        global active_timesheet_entry
-        active_timesheet_entry = instantiate_timesheet_entry()
+        instantiate_timesheet_entry()
 
     
 
