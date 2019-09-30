@@ -20,7 +20,7 @@ def change(folder):
     #check for folder_name.txt in source folder
     source_path = 'C:\\InventorWork'
     destination_path = 'C:\\' + folder
-    if os.path.isfile(source_path + '\\' + 'folder_name.txt'):
+    if os.path.isfile(f"{source_path}\\folder_name.txt"):
         with open(f"{source_path}\\folder_name.txt", 'r') as txtfile:
             source_name = txtfile.read()
     else:
@@ -59,16 +59,15 @@ def change(folder):
                     os.rename(f'C:\\{source_name}', 'C:\\InventorWork')
                     raise RuntimeError
                 except PermissionError:
-                    print
+                    print('Failed renaming destination folder to InventorWork')
                     raise RuntimeError
             print('renamed from' + iw_change)
             open_inv()
             print('opened inventor')
-            print('done')
             return True
         else:
-            print('inventor not closed')
-            raise OSError('Inventor not closed')
+            print('Failed closing Inventor')
+            raise OSError('Failed closing Inventor')
 
 def make(project,machine):
     if kill():
@@ -78,8 +77,8 @@ def make(project,machine):
         except RuntimeError as e:
             raise
     else:
-        print('inventor not closed')
-        raise OSError('Inventor not closed')
+        print('Failed closing Inventor')
+        raise OSError('Failed closing Inventor')
     
 
 ##Close current inventor session
@@ -117,8 +116,7 @@ def WindowEnumerate():
     
 
 def open_inv():
-    #p = subprocess.Popen('C:\\Program Files\\Autodesk\\Inventor 2016\\Bin\\Inventor.exe');
-    p = subprocess.Popen('D:\\Inventor Professional\\Inventor 2018\\Bin\\Inventor.exe');
+    p = subprocess.Popen('C:\\Program Files\\Autodesk\\Inventor 2016\\Bin\\Inventor.exe');
     print('opened inventor')
     print(p.poll() == None);
     time.sleep(5);
@@ -135,7 +133,7 @@ def rename():
     time.sleep(1)
     result = False
     current_time = time.time()
-    while (time.time() - current_time) < 30:
+    while (time.time() - current_time) < 45:
         try:
             os.rename('C:\\InventorWork', 'C:\\' + source_name)
             print('Renamed InventorWork to ' + source_name)
@@ -361,8 +359,6 @@ class igui:
             ask_log_time_entry()
             start_timesheet_entry()
             self.update_list()
-        except LookupError as e:
-            return
         except OSError as e:
             print(repr(e))
             self.update_list()
@@ -411,14 +407,11 @@ class igui:
             results = generator.Window_Generator\
                       (self.mwindow, 'Newish InventorWork', 'Project', 'Machine', 'Make', newclick)
             print('updating list')
+            ask_log_time_entry()
+            start_timesheet_entry()
             self.update_list()
         else:
-            self.mwindow = Toplevel(self.master)
-            self.app = window_make_notxt(self.mwindow)
-            self.mwindow.grab_set()
-            self.master.wait_window(self.mwindow)
-            self.update_list()
-            
+            raise RuntimeError
 
 
 
